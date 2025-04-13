@@ -161,27 +161,62 @@ impl AIProvider for DeepseekProvider {
 
         // Parse the response to extract reasoning and content
         let re = regex::Regex::new(r"(?s)<think>(.*?)</think>\s*(.*)").unwrap();
-        if let Some(captures) = re.captures(&response_text) {
-            let reasoning = captures[1].trim().to_string();
-            let content = captures[2].trim().to_string();
-            
-            // Validate that neither part is empty
-            if reasoning.is_empty() || content.is_empty() {
-                error!("Empty reasoning or content in response");
-                return Err(StoryChainError::InvalidReasoningFormat(
-                    "Empty reasoning or content in response".to_string(),
+
+        // Extract reasoning and content using regex
+        let (reasoning, content) = match re.captures(&response_text) {
+            Some(caps) => {
+                let raw_reasoning = caps.get(1).unwrap().as_str().trim();
+                let raw_content = caps.get(2).unwrap().as_str().trim();
+                
+                // Filter out Chinese characters and clean up the text
+                let clean_reasoning = raw_reasoning.chars()
+                    .filter(|c| !('\u{4e00}'..='\u{9fff}').contains(c))
+                    .collect::<String>()
+                    .trim()
+                    .to_string();
+                let clean_content = raw_content.chars()
+                    .filter(|c| !('\u{4e00}'..='\u{9fff}').contains(c))
+                    .collect::<String>()
+                    .trim()
+                    .to_string();
+                
+                // Validate that filtering didn't remove all content
+                if clean_reasoning.is_empty() && !raw_reasoning.is_empty() {
+                    error!("Filtering removed all content from reasoning");
+                    return Err(StoryChainError::InvalidReasoningFormat(
+                        "Filtering removed all content from reasoning".to_string()
+                    ));
+                }
+                if clean_content.is_empty() && !raw_content.is_empty() {
+                    error!("Filtering removed all content from story content");
+                    return Err(StoryChainError::InvalidReasoningFormat(
+                        "Filtering removed all content from story content".to_string()
+                    ));
+                }
+                
+                (clean_reasoning, clean_content)
+            },
+            None => {
+                error!("Failed to parse AI response - no <think> tags found");
+                return Err(StoryChainError::AIServerError(
+                    "Failed to parse AI response - no <think> tags found".to_string()
                 ));
             }
-            
-            info!("Successfully parsed reasoning and content from response");
-            return Ok((reasoning, content));
-        }
+        };
 
-        error!("Could not parse AI response: {}", response_text);
-        Err(StoryChainError::InvalidReasoningFormat(format!(
-            "Could not parse AI response into reasoning and content. Response: {}",
-            response_text
-        )))
+        // Validate that neither part is empty
+        if reasoning.is_empty() || content.is_empty() {
+            error!("Empty reasoning or content in response");
+            return Err(StoryChainError::InvalidReasoningFormat(
+                "Empty reasoning or content in response".to_string(),
+            ));
+        }
+        
+        debug!("Filtered reasoning: {}", reasoning);
+        debug!("Filtered content: {}", content);
+
+        info!("Successfully parsed reasoning and content from response");
+        Ok((reasoning, content))
     }
 }
 
