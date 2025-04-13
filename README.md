@@ -86,26 +86,46 @@ cargo run -- <premise-name> --epochs <number> --output <output-file>
 
 ### Docker Usage
 
-1. Create your premise file as described above
+1. Create your premise file as described above in a local `artifacts` directory
 
-2. Run the container:
+2. Create a local directory for output files:
 ```bash
-docker run -v $(pwd)/artifacts:/app/artifacts -p 11434:11434 storychain
+mkdir -p output
 ```
 
-Parameters for both local and Docker usage:
+3. Run the container with mounted volumes:
+```bash
+docker run \
+  -v $(pwd)/artifacts:/app/artifacts \
+  -v $(pwd)/output:/app/output \
+  -p 11434:11434 \
+  storychain
+```
+
+This will:
+- Mount your local `artifacts` directory to access premise files
+- Mount your local `output` directory to save generated stories
+- Expose port 11434 for Ollama
+
+The generated files will be available in your local `output` directory:
+- `story.json`: The raw story data
+- `story.md`: A readable markdown version
+
+Parameters for Docker usage:
 - `premise-name`: Name of your premise file (without .yaml extension)
 - `--epochs`: Number of story segments to generate (default: 5)
-- `--output`: Output JSON file path (default: story.json)
+- `--output`: Output JSON file path (default: /app/output/story.json)
 
-Example:
+Example with custom parameters:
 ```bash
-# Local
-cargo run -- premise --epochs 3 --output my_story.json
-
-# Docker
-docker run -v $(pwd)/artifacts:/app/artifacts -p 11434:11434 storychain storychain premise --epochs 3 --output my_story.json
+docker run \
+  -v $(pwd)/artifacts:/app/artifacts \
+  -v $(pwd)/output:/app/output \
+  -p 11434:11434 \
+  storychain storychain my_premise --epochs 3 --output /app/output/my_story.json
 ```
+
+Note: Always use `/app/output/` as the base path for output files when running in Docker to ensure they are saved to your mounted volume.
 
 ## Output
 
