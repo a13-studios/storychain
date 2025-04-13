@@ -1,0 +1,30 @@
+title: "Your Story Title Here"         # Replace with your title
+genre: "Your Chosen Genre"             # Replace with your genre (e.g., Magical Realism, Science Fiction, etc.)
+setting: "Your Setting Description"      # Replace with your setting (e.g., Contemporary Urban, Rural, Futuristic, etc.)
+time_period: "Time Period of the Story"  # Replace with your desired time period (e.g., Present Day, 1920s, Future, etc.)
+
+premise: |
+  Write your story's premise here. This section should describe the core idea, conflict, or mystery
+  behind your narrative. You can include details about the setting, the transformation or conflict,
+  and any intriguing elements that set the stage for the narrative.
+
+characters:
+  - name: "Character One Name"
+    description: "A brief description of character one, including background or defining features."
+    arc: "Outline the character’s journey or transformation throughout the story."
+  - name: "Character Two Name"
+    description: "A brief description of character two."
+    arc: "Describe how this character evolves over the course of the narrative."
+  # Add additional character entries as needed.
+
+themes:
+  - "Theme One"                       # Replace with a theme (e.g., Choice and Consequence)
+  - "Theme Two"                       # Replace with another theme (e.g., Reality vs. Possibility)
+  - "Theme Three"                     # Continue adding as necessary
+  # Include as many themes as your story explores.
+
+plot_elements:
+  - "Key plot element one"            # Describe one major plot point or narrative mechanism.
+  - "Key plot element two"            # Describe another element that drives the story.
+  - "Key plot element three"          # Continue listing any plot elements.
+  # Add additional plot elements to capture all critical aspects of your narrative.
