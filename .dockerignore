@@ -1,0 +1,20 @@
+# Git
+.git
+.gitignore
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+
+# Generated files
+*.log
+story.json
+
+# Docker
+Dockerfile
+.dockerignore 

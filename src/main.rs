@@ -38,6 +38,7 @@ async fn main() -> Result<(), StoryChainError> {
     info!("Starting story generation with {} epochs", epochs);
 
     // Load premise from file
+    let start_time = std::time::Instant::now();
     let premise = std::fs::read_to_string(format!("artifacts/{}.yaml", premise_file))
         .map_err(|e| StoryChainError::IOError(e))?;
     info!("Loaded premise from artifacts/{}.yaml", premise_file);
@@ -50,6 +51,7 @@ async fn main() -> Result<(), StoryChainError> {
 
     // Generate initial scene
     info!("Generating initial scene");
+    let initial_start = std::time::Instant::now();
     let (reasoning, content) = provider.generate(&format!(
         "You are tasked with writing a scene in the style specified by the premise.\n\n\
         IMPORTANT: Format your response EXACTLY as follows:\n\
@@ -65,6 +67,8 @@ async fn main() -> Result<(), StoryChainError> {
         - Do NOT add any extra formatting or tags",
         premise
     )).await?;
+    let initial_time = initial_start.elapsed();
+    info!("Initial scene generation took: {:?}", initial_time);
 
     // Create story chain with content and reasoning in the correct order
     let mut chain = StoryChain::new(content, reasoning);
@@ -72,7 +76,8 @@ async fn main() -> Result<(), StoryChainError> {
     // Generate next nodes
     let mut current_node_id = "root".to_string();
     for epoch in 0..epochs {
-        info!("Generating epoch {}", epoch + 1);
+        let epoch_start = std::time::Instant::now();
+        info!("Starting epoch {} of {}", epoch + 1, epochs);
         let next_node_ids = chain
             .generate_next_nodes(&current_node_id, &provider, Some(&premise))
             .await?;
@@ -80,11 +85,15 @@ async fn main() -> Result<(), StoryChainError> {
             break;
         }
         current_node_id = next_node_ids[0].clone();
+        let epoch_time = epoch_start.elapsed();
+        info!("Epoch {} took: {:?}", epoch + 1, epoch_time);
     }
 
     // Export story chain
     chain.export_to_file(output_file)?;
+    let total_time = start_time.elapsed();
     info!("Story chain exported to {}", output_file);
+    info!("Total story generation took: {:?}", total_time);
 
     Ok(())
 }

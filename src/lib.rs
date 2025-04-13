@@ -157,6 +157,7 @@ impl StoryChain {
         ai_provider: &dyn AIProvider,
         premise: Option<&str>,
     ) -> Result<Vec<String>, StoryChainError> {
+        let start_time = std::time::Instant::now();
         debug!("Generating next node for: {}", current_node_id);
         let current_node = self.nodes.get(current_node_id)
             .ok_or_else(|| StoryChainError::AIServerError("Node not found".to_string()))?;
@@ -167,6 +168,9 @@ impl StoryChain {
             debug!("Including premise in prompt");
             prompt.push_str(&format!("Story Premise:\n{}\n\n", premise));
         }
+        
+        let prompt_time = start_time.elapsed();
+        debug!("Prompt preparation took: {:?}", prompt_time);
         
         prompt.push_str(&format!(
             "You are continuing a story. Here is the previous scene and its reasoning:\n\n\
@@ -183,8 +187,10 @@ impl StoryChain {
         ));
 
         debug!("Sending prompt to AI provider");
+        let generation_start = std::time::Instant::now();
         let (reasoning, content) = ai_provider.generate(&prompt).await?;
-        debug!("Received response from AI provider");
+        let generation_time = generation_start.elapsed();
+        info!("AI generation took: {:?}", generation_time);
         
         // Create new node with a unique ID based on the number of existing nodes
         let new_id = format!("node_{}", self.nodes.len());
@@ -206,7 +212,8 @@ impl StoryChain {
         }
 
         self.nodes.insert(new_id.clone(), new_node);
-        info!("Successfully generated new node");
+        let total_time = start_time.elapsed();
+        info!("Total node generation took: {:?}", total_time);
         Ok(vec![new_id])
     }
 
