@@ -1,3 +1,9 @@
+//! StoryChain Library - Core functionality for AI-driven narrative generation
+//! 
+//! This library provides the core components for generating narratives using AI models.
+//! It includes structures for managing story nodes, chains of narrative content,
+//! and interfaces for AI providers that generate the actual content.
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
@@ -10,49 +16,93 @@ use chrono::Local;
 pub mod artifacts;
 pub use artifacts::{Artifact, ArtifactManager, ArtifactType};
 
+/// Represents possible errors that can occur during story generation
+/// and related operations.
 #[derive(Error, Debug)]
 pub enum StoryChainError {
+    /// Error communicating with the AI server
     #[error("AI server error: {0}")]
     AIServerError(String),
+    
+    /// Error parsing the AI's response format
     #[error("Invalid reasoning format: {0}")]
     InvalidReasoningFormat(String),
+    
+    /// File system operation error
     #[error("IO error: {0}")]
     IOError(#[from] std::io::Error),
+    
+    /// JSON serialization/deserialization error
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),
 }
 
+/// Represents a single node in the story chain, containing the narrative content
+/// and metadata about its connections to other nodes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoryNode {
+    /// Unique identifier for the node
     pub id: String,
+    
+    /// The actual narrative content of this node
     pub content: String,
+    
+    /// The AI's reasoning for generating this content
     pub reasoning: String,
+    
+    /// ID of the previous node in the chain (if any)
     pub predecessor: Option<String>,
+    
+    /// ID of the next node in the chain (if any)
     pub successor: Option<String>,
+    
+    /// Additional metadata associated with this node
     pub metadata: HashMap<String, String>,
 }
 
+/// Represents a complete chain of story nodes, forming a narrative.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoryChain {
+    /// Map of node IDs to their corresponding StoryNode instances
     pub nodes: HashMap<String, StoryNode>,
+    
+    /// ID of the first node in the chain
     pub root_node_id: String,
 }
 
+/// Trait defining the interface for AI providers that generate story content.
 #[async_trait::async_trait]
 pub trait AIProvider {
+    /// Generates content based on a given prompt
+    /// 
+    /// # Arguments
+    /// * `prompt` - The prompt to send to the AI model
+    /// 
+    /// # Returns
+    /// A tuple of (reasoning, content) strings or an error
     async fn generate(&self, prompt: &str) -> Result<(String, String), StoryChainError>;
 }
 
+/// Implementation of AIProvider using the Deepseek language model
 pub struct DeepseekProvider {
+    /// The specific Deepseek model to use
     model: String,
+    
+    /// Path to the file where AI responses will be logged
     log_file: String,
 }
 
 impl DeepseekProvider {
+    /// Creates a new DeepseekProvider instance
     pub fn new(model: String, log_file: String) -> Self {
         Self { model, log_file }
     }
 
+    /// Logs AI interactions to a file for debugging and analysis
+    /// 
+    /// # Arguments
+    /// * `prompt` - The prompt sent to the AI
+    /// * `response` - The AI's response
     fn log_response(&self, prompt: &str, response: &str) -> Result<(), StoryChainError> {
         let mut file = OpenOptions::new()
             .create(true)
@@ -71,10 +121,12 @@ impl DeepseekProvider {
 
 #[async_trait::async_trait]
 impl AIProvider for DeepseekProvider {
+    /// Generates story content using the Deepseek model via Ollama
     async fn generate(&self, prompt: &str) -> Result<(String, String), StoryChainError> {
         info!("Sending request to Ollama for model: {}", self.model);
         debug!("Prompt: {}", prompt);
 
+        // Execute Ollama command to generate content
         let output = Command::new("ollama")
             .arg("run")
             .arg(&self.model)
@@ -85,6 +137,7 @@ impl AIProvider for DeepseekProvider {
                 StoryChainError::AIServerError(format!("Failed to execute Ollama command: {}", e))
             })?;
 
+        // Check for command execution success
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             error!("Ollama command failed: {}", stderr);
@@ -94,6 +147,7 @@ impl AIProvider for DeepseekProvider {
             )));
         }
 
+        // Parse the output into UTF-8 string
         let response_text = String::from_utf8(output.stdout)
             .map_err(|e| {
                 error!("Failed to parse Ollama output: {}", e);
@@ -102,15 +156,16 @@ impl AIProvider for DeepseekProvider {
 
         debug!("Raw AI response: {}", response_text);
 
-        // Log the response for debugging and persistence
+        // Log the response for debugging
         self.log_response(prompt, &response_text)?;
 
-        // Try to parse the response for think block using a more robust regex
+        // Parse the response to extract reasoning and content
         let re = regex::Regex::new(r"(?s)<think>(.*?)</think>\s*(.*)").unwrap();
         if let Some(captures) = re.captures(&response_text) {
             let reasoning = captures[1].trim().to_string();
             let content = captures[2].trim().to_string();
             
+            // Validate that neither part is empty
             if reasoning.is_empty() || content.is_empty() {
                 error!("Empty reasoning or content in response");
                 return Err(StoryChainError::InvalidReasoningFormat(
@@ -131,6 +186,7 @@ impl AIProvider for DeepseekProvider {
 }
 
 impl StoryChain {
+    /// Creates a new StoryChain with an initial root node
     pub fn new(root_content: String, root_reasoning: String) -> Self {
         info!("Creating new story chain");
         let root_node = StoryNode {
@@ -151,6 +207,12 @@ impl StoryChain {
         }
     }
 
+    /// Generates the next node(s) in the story chain
+    /// 
+    /// # Arguments
+    /// * `current_node_id` - ID of the node to generate from
+    /// * `ai_provider` - The AI provider to use for generation
+    /// * `premise` - Optional premise to include in generation
     pub async fn generate_next_nodes(
         &mut self,
         current_node_id: &str,
@@ -159,11 +221,14 @@ impl StoryChain {
     ) -> Result<Vec<String>, StoryChainError> {
         let start_time = std::time::Instant::now();
         debug!("Generating next node for: {}", current_node_id);
+        
+        // Get the current node or return error if not found
         let current_node = self.nodes.get(current_node_id)
             .ok_or_else(|| StoryChainError::AIServerError("Node not found".to_string()))?;
 
         let mut prompt = String::new();
         
+        // Include premise in prompt if provided
         if let Some(premise) = premise {
             debug!("Including premise in prompt");
             prompt.push_str(&format!("Story Premise:\n{}\n\n", premise));
@@ -172,6 +237,7 @@ impl StoryChain {
         let prompt_time = start_time.elapsed();
         debug!("Prompt preparation took: {:?}", prompt_time);
         
+        // Construct the prompt for the next scene
         prompt.push_str(&format!(
             "You are continuing a story. Here is the previous scene and its reasoning:\n\n\
             Previous Scene Reasoning:\n{}\n\n\
@@ -192,7 +258,7 @@ impl StoryChain {
         let generation_time = generation_start.elapsed();
         info!("AI generation took: {:?}", generation_time);
         
-        // Create new node with a unique ID based on the number of existing nodes
+        // Create new node with unique ID
         let new_id = format!("node_{}", self.nodes.len());
         debug!("Creating new node: {}", new_id);
         
@@ -205,7 +271,7 @@ impl StoryChain {
             metadata: HashMap::new(),
         };
         
-        // Update current node's successor
+        // Update the current node's successor reference
         if let Some(node) = self.nodes.get_mut(current_node_id) {
             node.successor = Some(new_id.clone());
             debug!("Updated successor for node: {}", current_node_id);
@@ -217,6 +283,7 @@ impl StoryChain {
         Ok(vec![new_id])
     }
 
+    /// Exports the story chain to a JSON file
     pub fn export_to_file(&self, path: &str) -> Result<(), StoryChainError> {
         info!("Exporting story chain to file: {}", path);
         let serialized = serde_json::to_string_pretty(&self)?;
