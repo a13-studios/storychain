@@ -22,7 +22,6 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
-    nvidia-cuda-toolkit \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Ollama
@@ -35,8 +34,6 @@ COPY --from=builder /usr/src/storychain/target/release/storychain /usr/local/bin
 ENV RUST_LOG=info
 ENV OLLAMA_HOST=0.0.0.0:11434
 ENV OLLAMA_MODEL=deepseek-r1:32b
-# Enable GPU support
-ENV CUDA_VISIBLE_DEVICES=all
 
 # Create directories for artifacts and output
 # These directories are meant to be mounted as volumes:
@@ -48,14 +45,6 @@ WORKDIR /app
 
 # Create entrypoint script with GPU checks
 RUN echo '#!/bin/bash\n\
-# Check for NVIDIA GPU\n\
-if command -v nvidia-smi &> /dev/null; then\n\
-    echo "NVIDIA GPU detected:"\n\
-    nvidia-smi\n\
-else\n\
-    echo "Warning: No NVIDIA GPU detected, falling back to CPU"\n\
-fi\n\
-\n\
 # Start Ollama server in the background\n\
 ollama serve &\n\
 \n\
