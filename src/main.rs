@@ -115,8 +115,14 @@ async fn main() -> Result<(), StoryChainError> {
 
     // Export the complete story chain to the specified output file
     chain.export_to_file(output_file)?;
-    let total_time = start_time.elapsed();
     info!("Story chain exported to {}", output_file);
+
+    // Also export to markdown
+    let markdown_file = output_file.replace(".json", ".md");
+    chain.export_to_markdown(&markdown_file)?;
+    info!("Story exported to markdown at {}", markdown_file);
+
+    let total_time = start_time.elapsed();
     info!("Total story generation took: {:?}", total_time);
 
     Ok(())

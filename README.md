@@ -133,6 +133,22 @@ The generated story is saved in JSON format with the following structure:
 }
 ```
 
+### Converting to Readable Format
+
+The story output can be converted to a readable markdown format using the provided Python script:
+
+```bash
+python3 scripts/story_to_markdown.py story.json
+```
+
+This will create `story.md` with:
+- Numbered scenes
+- Story content in a readable format
+- AI's reasoning for each scene in collapsible sections
+- Clear scene separators
+
+The markdown file can be viewed in any markdown reader or GitHub for a pleasant reading experience.
+
 ## Logging
 
 The system logs AI responses to `ai_responses.log` and general execution information through the standard logging system. Set the `RUST_LOG` environment variable to control log levels:

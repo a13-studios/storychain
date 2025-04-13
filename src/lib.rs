@@ -291,4 +291,48 @@ impl StoryChain {
         info!("Successfully exported story chain");
         Ok(())
     }
+
+    /// Exports the story chain to a markdown file
+    /// 
+    /// # Arguments
+    /// * `path` - The path where the markdown file should be saved
+    pub fn export_to_markdown(&self, path: &str) -> Result<(), StoryChainError> {
+        let mut content = String::new();
+        
+        // Add header
+        content.push_str("# Generated Story\n\n");
+        content.push_str(&format!("*Generated on {}*\n\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S")));
+        content.push_str("---\n\n");
+
+        // Start with root node
+        let mut current_id = &self.root_node_id;
+        let mut scene_num = 1;
+
+        // Process each node in sequence
+        while let Some(node) = self.nodes.get(current_id) {
+            // Add scene header
+            content.push_str(&format!("## Scene {}\n\n", scene_num));
+            
+            // Add scene content
+            content.push_str(&node.content);
+            content.push_str("\n\n");
+            
+            // Add AI's reasoning in a collapsible section
+            content.push_str("<details>\n<summary>AI's Reasoning</summary>\n\n");
+            content.push_str(&node.reasoning);
+            content.push_str("\n</details>\n\n---\n\n");
+            
+            // Move to next node if it exists
+            if let Some(next_id) = &node.successor {
+                current_id = next_id;
+                scene_num += 1;
+            } else {
+                break;
+            }
+        }
+
+        // Write to file
+        std::fs::write(path, content)?;
+        Ok(())
+    }
 } 
