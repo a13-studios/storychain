@@ -11,10 +11,12 @@ premise: |
 characters:
   - name: "Character One Name"
     description: "A brief description of character one, including background or defining features."
-    arc: "Outline the character’s journey or transformation throughout the story."
+    arc: "Outline the character's journey or transformation throughout the story."
+    terminal_state: "Describe the intended final state or resolution for this character."
   - name: "Character Two Name"
     description: "A brief description of character two."
     arc: "Describe how this character evolves over the course of the narrative."
+    terminal_state: "Describe how this character's journey should conclude."
   # Add additional character entries as needed.
 
 themes:
@@ -28,3 +30,32 @@ plot_elements:
   - "Key plot element two"            # Describe another element that drives the story.
   - "Key plot element three"          # Continue listing any plot elements.
   # Add additional plot elements to capture all critical aspects of your narrative.
+
+story_resolution:
+  primary_plot:
+    outcome: "Description of how the main conflict/plot should be resolved"
+    key_revelations: ["List of major revelations that must be unveiled"]
+    consequences: ["List of lasting impacts from the resolution"]
+  
+  character_conclusions:
+    required_arcs: 
+      - character: "Character Name"
+        resolution: "How this character's story must end"
+        transformation: "Key changes in the character"
+    optional_arcs:
+      - character: "Character Name"
+        possible_endings: ["List of acceptable ending states for this character"]
+  
+  thematic_resolution:
+    central_themes: ["List of themes that must be addressed in conclusion"]
+    moral_statements: ["Key thematic messages to be conveyed"]
+  
+  world_state:
+    final_state: "Description of the world/setting's condition at story end"
+    lasting_changes: ["List of permanent changes to the story's world"]
+  
+  narrative_style:
+    ending_type: "closed"  # or "open" for different ending styles
+    tone: "bittersweet"  # e.g., triumphant, tragic, bittersweet
+    loose_threads: ["List of elements intentionally left unresolved"]
+    sequel_hooks: ["Optional plot points that could lead to future stories"]

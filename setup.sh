@@ -63,3 +63,6 @@ ollama list
 
 echo "----------------------------------------------"
 echo "Setup complete."
+
+# download story md locally
+# scp -P 30845 root@58.224.7.136:/workspace/storychain/story.md ~/Downloads/

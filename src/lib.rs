@@ -248,11 +248,15 @@ impl StoryChain {
     /// * `current_node_id` - ID of the node to generate from
     /// * `ai_provider` - The AI provider to use for generation
     /// * `premise` - Optional premise to include in generation
+    /// * `current_epoch` - Current epoch number
+    /// * `total_epochs` - Total number of epochs planned
     pub async fn generate_next_nodes(
         &mut self,
         current_node_id: &str,
         ai_provider: &dyn AIProvider,
         premise: Option<&str>,
+        current_epoch: usize,
+        total_epochs: usize,
     ) -> Result<Vec<String>, StoryChainError> {
         let start_time = std::time::Instant::now();
         debug!("Generating next node for: {}", current_node_id);
@@ -269,22 +273,38 @@ impl StoryChain {
             prompt.push_str(&format!("Story Premise:\n{}\n\n", premise));
         }
         
-        let prompt_time = start_time.elapsed();
-        debug!("Prompt preparation took: {:?}", prompt_time);
+        // Add story progression context
+        let story_phase = match current_epoch {
+            e if e <= total_epochs / 3 => "early_game",
+            e if e <= (2 * total_epochs) / 3 => "mid_game",
+            _ => "end_game"
+        };
+        
+        let epochs_remaining = total_epochs.saturating_sub(current_epoch);
+        prompt.push_str(&format!(
+            "Story Progress:\n\
+            - Current epoch: {} of {}\n\
+            - Story phase: {}\n\
+            - Epochs remaining: {}\n\n",
+            current_epoch, total_epochs, story_phase, epochs_remaining
+        ));
         
         // Construct the prompt for the next scene
         prompt.push_str(&format!(
             "You are continuing a story. Here is the previous scene and its reasoning:\n\n\
             Previous Scene Reasoning:\n{}\n\n\
             Previous Scene Content:\n{}\n\n\
-            Now continue the story, maintaining consistency with the previous scene and the overall premise.\n\n\
+            Now continue the story, maintaining consistency with the previous scene and the overall premise.\n\
+            Consider the current story phase ({}) and remaining epochs ({}) when deciding how to progress the plot.\n\n\
             IMPORTANT: Format your response EXACTLY as follows:\n\
             <think>\n\
             Your reasoning about how this scene continues the story and develops the narrative.\n\
             </think>\n\
             Write your scene content here, making sure it flows naturally from the previous scene...",
             current_node.reasoning,
-            current_node.content
+            current_node.content,
+            story_phase,
+            epochs_remaining
         ));
 
         debug!("Sending prompt to AI provider");

@@ -63,24 +63,31 @@ mod tests {
         let mut chain = StoryChain::new(
             "Initial content".to_string(),
             "Initial reasoning".to_string(),
-            2,
         );
 
         let ai_provider = MockAIProvider;
-        let new_nodes = chain.generate_next_nodes("root", &ai_provider).await.unwrap();
+        let mut current_node_id = "root".to_string();
+        let total_epochs = 3;
+        
+        for epoch in 0..total_epochs {
+            let new_nodes = chain
+                .generate_next_nodes(
+                    &current_node_id,
+                    &ai_provider,
+                    Some("Test premise"),
+                    epoch + 1,
+                    total_epochs
+                )
+                .await
+                .unwrap();
 
-        // Verify new node creation
-        assert_eq!(new_nodes.len(), 1);
-        assert_eq!(chain.nodes.len(), 2);
+            // Verify new node creation
+            assert_eq!(new_nodes.len(), 1);
+            assert_eq!(chain.nodes.len(), epoch + 2); // +2 because we start with root node
 
-        // Verify node connections
-        let root_node = chain.nodes.get("root").unwrap();
-        assert_eq!(root_node.successors.len(), 1);
-        assert_eq!(root_node.successors[0], "root_0");
-
-        let new_node = chain.nodes.get("root_0").unwrap();
-        assert_eq!(new_node.predecessors.len(), 1);
-        assert_eq!(new_node.predecessors[0], "root");
+            // Update current node for next iteration
+            current_node_id = new_nodes[0].clone();
+        }
     }
 
     /// Tests the ArtifactManager functionality

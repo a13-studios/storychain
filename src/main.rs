@@ -99,7 +99,13 @@ async fn main() -> Result<(), StoryChainError> {
         
         // Generate the next scene based on the current one
         let next_node_ids = chain
-            .generate_next_nodes(&current_node_id, &provider, Some(&premise))
+            .generate_next_nodes(
+                &current_node_id,
+                &provider,
+                Some(&premise),
+                epoch + 1,  // current epoch (1-indexed)
+                epochs     // total epochs
+            )
             .await?;
             
         // Break if no more nodes can be generated
